@@ -9,14 +9,21 @@ use validate::*;
 fn main() {
 
     let input = "
-fn main() -> int {
-    if (1 == 1) {
-        return(1);
+    struct MyStruct {
+        int x,
+        string y
     }
+    
+    fn main() {
+        MyStruct z = MyStruct {
+            x: 0,
+            y: 1   
+        };
+    
+        print_int(z.y);
 
-return(0);
-print(1);
-}
+        int x = 0;
+    }
 ";
     let mut lexer = Lexer::new(input.to_string());
 

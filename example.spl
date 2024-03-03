@@ -1,6 +1,6 @@
 struct MyStruct {
-    int x,
-    string y
+    int x;
+    string y;
 }
 
 fn main() {

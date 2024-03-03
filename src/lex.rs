@@ -1,6 +1,6 @@
 use std::default;
 
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Clone, Default, Eq, Hash)]
 pub enum Token {
     Number(i32),
     If,
@@ -10,11 +10,15 @@ pub enum Token {
     Fn,
     Return,
     Arguments,
+    Fields,
     Struct,
     Int,
     String,
     Float,
     List,
+    Comma,
+    Colon,
+    DecimalPoint,
 
     #[default]
     Null,
@@ -73,17 +77,15 @@ impl Lexer {
         self.skip_whitespace();
 
         let tok = match self.ch {
-            ';' => {
-
-                Token::SemiColon
-            },
             '(' => Token::LeftParen,
             ')' => Token::RightParen,
             '{' => Token::LeftCurlyBracket,
             '}' => Token::RightCurlyBracket,
             '[' => Token::LeftSquareBracket,
             ']' => Token::RightSquareBracket,
+            ';' => Token::SemiColon,
             '+' => Token::Plus,
+            ':' => Token::Colon,
             '-' => {
                 if self.peek_char() == '>' {
                     self.read_char();
@@ -92,7 +94,7 @@ impl Lexer {
                     Token::Minus
                 }
             
-            }
+            },
             '*' => Token::Star,
             '/' => Token::Slash,
             '=' => {
@@ -127,32 +129,30 @@ impl Lexer {
                     Token::GreaterThan
                 }
             }
+            ',' => Token::Comma,
+            '.' => Token::DecimalPoint,
+            '\0' => Token::EOF,
             _ => {
-                if self.ch == '\0' {
-                    return Token::EOF
-                }
                 if self.ch.is_alphabetic() {
                     let ident = self.read_identifier();
-
                     match ident.as_str() {
                         "if" => Token::If,
                         "else" => Token::Else,
                         "elif" => Token::Elif,
                         "while" => Token::While,
                         "fn" => Token::Fn,
-                        "struct" => Token::Struct,
+                        "return" => Token::Return,
                         "int" => Token::Int,
                         "string" => Token::String,
                         "float" => Token::Float,
                         "list" => Token::List,
-                        "null" => Token::Null,
-                        "return" => Token::Return,
+                        "struct" => Token::Struct,
                         _ => Token::Identifier(ident),
                     }
                 } else if self.ch.is_digit(10) {
                     Token::Number(self.read_number())
                 } else {
-                    panic!("Unknown token: {}", self.ch);
+                    Token::Null
                 }
             }
         };
@@ -180,11 +180,13 @@ impl Lexer {
 
     pub fn read_identifier(&mut self) -> String {
         let position = self.position;
-        while self.ch.is_alphabetic() {
+        while self.ch.is_alphabetic() || self.ch == '_' {
             self.read_char();
         }
 
+
         self.read_position -= 1;
+        self.ch = self.input.chars().nth(self.read_position).unwrap();
 
         self.input[position..self.position].to_string()
     }
@@ -194,6 +196,10 @@ impl Lexer {
         while self.ch.is_digit(10) {
             self.read_char();
         }
+
+        self.read_position -= 1;
+        self.ch = self.input.chars().nth(self.read_position).unwrap();
+
         self.input[position..self.position].parse().unwrap()
     }
 

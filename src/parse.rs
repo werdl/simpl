@@ -1,6 +1,6 @@
 use crate::lex::*;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub struct Node {
     pub token: Token,
     pub children: Vec<Node>,
@@ -204,6 +204,44 @@ pub fn parse(toks: Vec<Token>) -> Node {
                 }
                 nodes.push(Node {
                     token: Token::Block,
+                    children,
+                });
+            }
+            Token::Struct => {
+                /*
+                struct name {
+                    type name;
+                    type name;
+                }
+                 */
+
+                let mut children = Vec::new();
+
+                i += 1;
+
+                children.push(Node { // name
+                    token: toks[i].clone(),
+                    children: Vec::new(),
+                });
+
+                i += 2; // skip left curly bracket
+
+                let mut fields = Vec::new();
+                while toks[i] != Token::RightCurlyBracket {
+                    fields.push(Node {
+                        token: toks[i].clone(),
+                        children: Vec::new(),
+                    });
+                    i += 1;
+                }
+
+                children.push(Node { // fields
+                    token: Token::Fields,
+                    children: fields,
+                });
+
+                nodes.push(Node {
+                    token: Token::Struct,
                     children,
                 });
             }

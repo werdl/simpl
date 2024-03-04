@@ -11,6 +11,7 @@ pub enum Token {
     Return,
     Arguments,
     Fields,
+    Functions,
     Struct,
     Int,
     String,

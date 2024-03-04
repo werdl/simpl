@@ -10,11 +10,11 @@ fn main() {
 
     let input = "
     struct MyStruct {
-        int x,
-        string y
+        int x;
+        string y;
     }
     
-    fn main() {
+    fn main() -> null {
         MyStruct z = MyStruct {
             x: 0,
             y: 1   

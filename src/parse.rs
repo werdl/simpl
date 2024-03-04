@@ -212,11 +212,15 @@ pub fn parse(toks: Vec<Token>) -> Node {
                 struct name {
                     type name;
                     type name;
+                    fn name(type name, type name) -> type {
+                        ...
+                    }
                 }
                  */
 
                 let mut children = Vec::new();
 
+                // push name to children
                 i += 1;
 
                 children.push(Node { // name
@@ -224,20 +228,76 @@ pub fn parse(toks: Vec<Token>) -> Node {
                     children: Vec::new(),
                 });
 
-                i += 2; // skip left curly bracket
+                // now iterate until we find the matching right curly bracket, gathering the tokens. then, recursively parse them
 
-                let mut fields = Vec::new();
-                while toks[i] != Token::RightCurlyBracket {
-                    fields.push(Node {
-                        token: toks[i].clone(),
-                        children: Vec::new(),
-                    });
-                    i += 1;
+                let mut block = Vec::new();
+                let mut depth = 1;
+                i += 1;
+                if i < toks.len() {
+                    while depth > 0 {
+                        if toks[i] == Token::LeftCurlyBracket {
+                            depth += 1;
+                        } else if toks[i] == Token::RightCurlyBracket {
+                            depth -= 1;
+                        }
+                        if depth > 0 {
+                            block.push(toks[i].clone());
+                        }
+                        i += 1;
+
+                        if i >= toks.len() {
+                            break;
+                        }
+                    }
                 }
 
-                children.push(Node { // fields
+                // now remove the last token, which is the right curly bracket, and the first token, which is the left curly bracket
+                match block.pop() {
+                    Some(Token::RightCurlyBracket) => {}
+                    Some(Token::EOF) => {
+                        block.pop();
+                    }
+                    _ => {}
+                }
+
+                block.remove(0);
+
+                // extract all the fields, then functions
+                let mut fields = Vec::new();
+
+                let mut j = 0;
+                while j < block.len() {
+                    if block[j] == Token::Fn {
+                        break;
+                    }
+                    fields.push(Node {
+                        token: block[j].clone(),
+                        children: Vec::new(),
+                    });
+                    j += 1;
+                }
+
+                children.push(Node {
                     token: Token::Fields,
                     children: fields,
+                });
+
+                // now extract the functions
+                let mut functions = Vec::new();
+                while j < block.len() {
+                    let mut func = Vec::new();
+                    while block[j] != Token::SemiColon {
+                        func.push(block[j].clone());
+                        j += 1;
+                    }
+                    func.push(Token::SemiColon);
+                    functions.push(parse(func));
+                    j += 1;
+                }
+
+                children.push(Node {
+                    token: Token::Functions,
+                    children: functions,
                 });
 
                 nodes.push(Node {
@@ -311,7 +371,6 @@ pub fn parse(toks: Vec<Token>) -> Node {
                     _ => {}
                 }
 
-                block.remove(0);
 
                 // parse the block
                 children.push(Node {
@@ -324,6 +383,87 @@ pub fn parse(toks: Vec<Token>) -> Node {
                     token: Token::Fn,
                     children,
                 });
+            }
+            Token::Identifier(_) => {
+                // if it is followed by a LeftCurlyBracket, it is a struct definition
+
+                let next = toks[i + 1].clone();
+
+                println!("currently on {:?}", toks[i]);
+                println!("next is {:?}", next);
+
+                match next {
+                    Token::LeftCurlyBracket => {
+                        // handle struct definition
+                        let mut children = Vec::new();
+
+                        // push name to children
+                        children.push(Node { // name
+                            token: toks[i].clone(),
+                            children: Vec::new(),
+                        });
+
+                        // now iterate until we find the matching right curly bracket, gathering the tokens. there will be no functions, so we don't need to parse them
+                        let mut block = Vec::new();
+                        let mut depth = 1;
+                        i += 2;
+
+                        if i < toks.len() {
+                            while depth > 0 {
+                                if toks[i] == Token::LeftCurlyBracket {
+                                    depth += 1;
+                                } else if toks[i] == Token::RightCurlyBracket {
+                                    depth -= 1;
+                                }
+                                if depth > 0 {
+                                    block.push(toks[i].clone());
+                                }
+                                i += 1;
+
+                                if i >= toks.len() {
+                                    break;
+                                }
+                            }
+                        }
+
+                        // now remove the last token, which is the right curly bracket, and the first token, which is the left curly bracket
+
+                        match block.pop() {
+                            Some(Token::RightCurlyBracket) => {}
+                            Some(Token::EOF) => {
+                                block.pop();
+                            }
+                            _ => {}
+                        }
+
+                        block.remove(0);
+
+                        // extract all the fields
+                        let mut fields = Vec::new();
+
+                        let mut j = 0;
+
+                        while j < block.len() {
+                            fields.push(Node {
+                                token: block[j].clone(),
+                                children: Vec::new(),
+                            });
+                            println!("pushing {:?}", toks[i]);
+                            j += 1;
+                        }
+
+                        children.push(Node {
+                            token: Token::Fields,
+                            children: fields,
+                        });
+
+                        nodes.push(Node {
+                            token: Token::Struct,
+                            children,
+                        });
+                    }
+                    _ => {}
+                }
             }
             _ => {
                 // ensure to split lines by semicolons
